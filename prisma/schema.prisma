@@ -6,6 +6,133 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Main time trial run record
+model TimeTrialRun {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Core time trial data
+  course      Course   @relation(fields: [courseId], references: [id])
+  courseId    String
+  rider       Rider    @relation(fields: [riderId], references: [id])
+  riderId     String
+  time        String   // Format: MM:SS.ms (e.g., "12:32.76")
+  timeInMs    Int      // Stored in milliseconds for easier sorting/comparison
+  boardType   BoardType @relation(fields: [boardTypeId], references: [id])
+  boardTypeId String
+  timeOfDay   String   // Format: "8PM - 9PM"
+  date        DateTime
+  notes       String?  @db.Text
+  weather     Weather? @relation(fields: [weatherId], references: [id])
+  weatherId   String?
+
+  // Optional metadata
+  isPersonalBest Boolean @default(false)
+  isCourseRecord Boolean @default(false)
+  videoUrl       String? // For future feature to link ride videos
+  gpxData        String? @db.Text // For future feature to store route data
+  
+  // Tags for flexible categorization
+  tags          TagsOnRuns[]
+}
+
+// Course information
+model Course {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?  @db.Text
+  distance    Float?   // in miles or kilometers
+  difficulty  String?  // easy, medium, hard
+  location    String?
+  elevation   Int?     // elevation gain in feet
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  runs        TimeTrialRun[]
+  records     CourseRecord[]
+}
+
+// Course records tracking
+model CourseRecord {
+  id        String   @id @default(cuid())
+  course    Course   @relation(fields: [courseId], references: [id])
+  courseId  String
+  rider     Rider    @relation(fields: [riderId], references: [id])
+  riderId   String
+  time      String
+  timeInMs  Int
+  boardType BoardType @relation(fields: [boardTypeId], references: [id])
+  boardTypeId String
+  setAt     DateTime
+  broken    Boolean  @default(false)
+  
+  @@unique([courseId, boardTypeId]) // Only one record per course per board type
+}
+
+// Rider profiles
+model Rider {
+  id            String   @id @default(cuid())
+  name          String
+  email         String?  @unique
+  profileImage  String?
+  experienceLevel String? // beginner, intermediate, expert
+  createdAt     DateTime @default(now())
+  
+  // Relations
+  runs          TimeTrialRun[]
+  courseRecords CourseRecord[]
+  preferredBoard BoardType? @relation(fields: [preferredBoardId], references: [id])
+  preferredBoardId String?
+}
+
+// Board types
+model BoardType {
+  id          String   @id @default(cuid())
+  name        String   @unique // GT, Pint X, etc.
+  description String?
+  
+  // Relations
+  runs        TimeTrialRun[]
+  records     CourseRecord[]
+  riders      Rider[] // riders who prefer this board
+}
+
+// Weather conditions
+model Weather {
+  id          String   @id @default(cuid())
+  condition   String   // sunny, rainy, cloudy, etc.
+  temperature Float?
+  windSpeed   Float?
+  humidity    Float?
+  
+  // Relations
+  runs        TimeTrialRun[]
+}
+
+// Tags for flexible categorization
+model Tag {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  color       String?  // For UI display
+  
+  // Relations
+  runs        TagsOnRuns[]
+}
+
+// Many-to-many relationship between runs and tags
+model TagsOnRuns {
+  run       TimeTrialRun @relation(fields: [runId], references: [id])
+  runId     String
+  tag       Tag    @relation(fields: [tagId], references: [id])
+  tagId     String
+  createdAt DateTime @default(now())
+
+  @@id([runId, tagId])
 }
