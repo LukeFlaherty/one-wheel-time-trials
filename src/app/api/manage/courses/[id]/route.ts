@@ -7,11 +7,14 @@ export async function DELETE(
 ) {
     try {
         await prismadb.course.delete({
-            where: { id: params.id }
+            where: {
+                id: params.id
+            }
         });
 
-        return NextResponse.json({ message: "Course deleted" }, { status: 200 });
+        return NextResponse.json({ message: "Course deleted" });
     } catch (error) {
-        return NextResponse.json({ message: "Error deleting course" }, { status: 500 });
+        console.log("[COURSE_DELETE]", error);
+        return NextResponse.json({ error: "Internal error" }, { status: 500 });
     }
 }

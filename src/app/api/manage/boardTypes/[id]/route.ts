@@ -7,11 +7,14 @@ export async function DELETE(
 ) {
     try {
         await prismadb.boardType.delete({
-            where: { id: params.id }
+            where: {
+                id: params.id
+            }
         });
 
-        return NextResponse.json({ message: "Board type deleted" }, { status: 200 });
+        return NextResponse.json({ message: "Board type deleted" });
     } catch (error) {
-        return NextResponse.json({ message: "Error deleting board type" }, { status: 500 });
+        console.log("[BOARD_TYPE_DELETE]", error);
+        return NextResponse.json({ error: "Internal error" }, { status: 500 });
     }
 }
