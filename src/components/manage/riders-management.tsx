@@ -1,5 +1,5 @@
-// components/manage/RidersManagement.tsx
 import React, { useState, useEffect } from 'react';
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -42,6 +42,7 @@ export default function RidersManagement() {
       const data = await response.json();
       setRiders(data);
     } catch (error) {
+      toast.error("Failed to load riders");
       console.error('Error fetching riders:', error);
     }
   };
@@ -63,10 +64,12 @@ export default function RidersManagement() {
 
       if (!response.ok) throw new Error('Failed to add rider');
       
+      toast.success("Rider added successfully");
       await fetchRiders();
       setIsAddDialogOpen(false);
       setFormData({ name: '', email: '', experienceLevel: '' });
     } catch (error) {
+      toast.error("Failed to add rider");
       console.error('Error adding rider:', error);
     } finally {
       setIsLoading(false);
@@ -74,18 +77,27 @@ export default function RidersManagement() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this rider?')) return;
+    const promise = new Promise(async (resolve, reject) => {
+      try {
+        const response = await fetch(`/api/manage/riders/${id}`, {
+          method: 'DELETE',
+        });
 
-    try {
-      const response = await fetch(`/api/manage/riders/${id}`, {
-        method: 'DELETE',
-      });
+        if (!response.ok) throw new Error('Failed to delete rider');
+        
+        await fetchRiders();
+        resolve("Rider deleted successfully");
+      } catch (error) {
+        console.error('Error deleting rider:', error);
+        reject("Failed to delete rider");
+      }
+    });
 
-      if (!response.ok) throw new Error('Failed to delete rider');
-      await fetchRiders();
-    } catch (error) {
-      console.error('Error deleting rider:', error);
-    }
+    toast.promise(promise, {
+      loading: 'Deleting rider...',
+      success: (data) => data as string,
+      error: (error) => error as string,
+    });
   };
 
   return (
@@ -148,7 +160,14 @@ export default function RidersManagement() {
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isLoading}>
-                  {isLoading ? "Adding..." : "Add Rider"}
+                  {isLoading ? (
+                    <>
+                      <span className="animate-spin mr-2">⭐</span> 
+                      Adding...
+                    </>
+                  ) : (
+                    "Add Rider"
+                  )}
                 </Button>
               </div>
             </form>

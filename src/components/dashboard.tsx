@@ -89,7 +89,7 @@ export default function TimeTrialDashboard() {
   return (
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">OneWheel Time Trials</h1>
+        <h1 className="text-2xl font-bold">Time Trials</h1>
         <AddRideModal onSuccess={handleAddSuccess} />
       </div>
 

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,23 +24,9 @@ interface AddRideModalProps {
   onSuccess?: () => void;
 }
 
-interface Option {
-  id: string;
-  name: string;
-}
-
 const AddRideModal = ({ onSuccess }: AddRideModalProps) => {
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [options, setOptions] = useState<{
-    courses: Option[];
-    boardTypes: Option[];
-    riders: Option[];
-  }>({
-    courses: [],
-    boardTypes: [],
-    riders: [],
-  });
 
   const [formData, setFormData] = useState({
     courseId: '',
@@ -51,58 +38,74 @@ const AddRideModal = ({ onSuccess }: AddRideModalProps) => {
     notes: ''
   });
 
-  useEffect(() => {
-    const fetchOptions = async () => {
-      try {
-        const response = await fetch('/api/getOptions');
-        if (!response.ok) throw new Error('Failed to fetch options');
-        const data = await response.json();
-        setOptions(data);
-      } catch (error) {
-        console.error('Error fetching options:', error);
-      }
-    };
-
-    if (open) {
-      fetchOptions();
-    }
-  }, [open]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    try {
-      const response = await fetch('/api/addRide', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to add ride');
-      }
-
-      setOpen(false);
-      if (onSuccess) onSuccess();
-      
-      // Reset form
-      setFormData({
-        courseId: '',
-        riderId: '',
-        time: '',
-        boardTypeId: '',
-        timeOfDay: '',
-        date: new Date().toISOString().split('T')[0],
-        notes: ''
-      });
-    } catch (error) {
-      console.error('Error adding ride:', error);
-    } finally {
+    // Validate time format
+    const timeRegex = /^\d{2}:\d{2}\.\d{2}$/;
+    if (!timeRegex.test(formData.time)) {
+      toast.error("Invalid time format. Please use MM:SS.ms (e.g., 12:34.56)");
       setIsLoading(false);
+      return;
     }
+
+    // Validate required fields
+    if (!formData.courseId || !formData.riderId || !formData.boardTypeId || !formData.timeOfDay) {
+      toast.error("Please fill in all required fields");
+      setIsLoading(false);
+      return;
+    }
+
+    const promise = new Promise(async (resolve, reject) => {
+      try {
+        const response = await fetch('/api/addRide', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to add ride');
+        }
+
+        const data = await response.json();
+        
+        setOpen(false);
+        if (onSuccess) onSuccess();
+        
+        // Reset form
+        setFormData({
+          courseId: '',
+          riderId: '',
+          time: '',
+          boardTypeId: '',
+          timeOfDay: '',
+          date: new Date().toISOString().split('T')[0],
+          notes: ''
+        });
+
+        resolve("Time trial run added successfully!");
+      } catch (error) {
+        console.error('Error adding ride:', error);
+        reject(error instanceof Error ? error.message : "Failed to add time trial run");
+      } finally {
+        setIsLoading(false);
+      }
+    });
+
+    toast.promise(promise, {
+      loading: 'Adding time trial run...',
+      success: (data) => {
+        return data as string;
+      },
+      error: (error) => {
+        return error as string;
+      },
+    });
   };
 
   return (
@@ -123,7 +126,7 @@ const AddRideModal = ({ onSuccess }: AddRideModalProps) => {
         <Separator />
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           <div className="space-y-2">
-            <label htmlFor="course" className="text-sm font-medium">Course</label>
+            <label htmlFor="course" className="text-sm font-medium">Course*</label>
             <Select
               value={formData.courseId}
               onValueChange={(value) => setFormData(prev => ({ ...prev, courseId: value }))}
@@ -132,36 +135,25 @@ const AddRideModal = ({ onSuccess }: AddRideModalProps) => {
                 <SelectValue placeholder="Select course" />
               </SelectTrigger>
               <SelectContent>
-                {options.courses.map((course) => (
-                  <SelectItem key={course.id} value={course.id}>
-                    {course.name}
-                  </SelectItem>
-                ))}
+                <SelectItem value="1">Beach Loop</SelectItem>
+                <SelectItem value="2">Forest Trail</SelectItem>
+                <SelectItem value="3">Mountain Pass</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="rider" className="text-sm font-medium">Rider</label>
-            <Select
+            <label htmlFor="rider" className="text-sm font-medium">Rider Name*</label>
+            <Input
+              id="rider"
               value={formData.riderId}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, riderId: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select rider" />
-              </SelectTrigger>
-              <SelectContent>
-                {options.riders.map((rider) => (
-                  <SelectItem key={rider.id} value={rider.id}>
-                    {rider.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={(e) => setFormData(prev => ({ ...prev, riderId: e.target.value }))}
+              placeholder="Enter rider name"
+            />
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="time" className="text-sm font-medium">Time (MM:SS.ms)</label>
+            <label htmlFor="time" className="text-sm font-medium">Time (MM:SS.ms)*</label>
             <Input
               id="time"
               value={formData.time}
@@ -172,7 +164,7 @@ const AddRideModal = ({ onSuccess }: AddRideModalProps) => {
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="boardType" className="text-sm font-medium">Board Type</label>
+            <label htmlFor="boardType" className="text-sm font-medium">Board Type*</label>
             <Select
               value={formData.boardTypeId}
               onValueChange={(value) => setFormData(prev => ({ ...prev, boardTypeId: value }))}
@@ -181,17 +173,16 @@ const AddRideModal = ({ onSuccess }: AddRideModalProps) => {
                 <SelectValue placeholder="Select board type" />
               </SelectTrigger>
               <SelectContent>
-                {options.boardTypes.map((boardType) => (
-                  <SelectItem key={boardType.id} value={boardType.id}>
-                    {boardType.name}
-                  </SelectItem>
-                ))}
+                <SelectItem value="1">GT</SelectItem>
+                <SelectItem value="2">Pint X</SelectItem>
+                <SelectItem value="3">Pint</SelectItem>
+                <SelectItem value="4">XR</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="timeOfDay" className="text-sm font-medium">Time of Day</label>
+            <label htmlFor="timeOfDay" className="text-sm font-medium">Time of Day*</label>
             <Select
               value={formData.timeOfDay}
               onValueChange={(value) => setFormData(prev => ({ ...prev, timeOfDay: value }))}
@@ -215,7 +206,7 @@ const AddRideModal = ({ onSuccess }: AddRideModalProps) => {
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="date" className="text-sm font-medium">Date</label>
+            <label htmlFor="date" className="text-sm font-medium">Date*</label>
             <Input
               id="date"
               type="date"
@@ -244,7 +235,14 @@ const AddRideModal = ({ onSuccess }: AddRideModalProps) => {
               Cancel
             </Button>
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Adding..." : "Add Run"}
+              {isLoading ? (
+                <>
+                  <span className="animate-spin mr-2">⭐</span> 
+                  Adding...
+                </>
+              ) : (
+                "Add Run"
+              )}
             </Button>
           </div>
         </form>

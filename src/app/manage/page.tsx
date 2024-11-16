@@ -1,12 +1,11 @@
-// app/manage/page.tsx
-'use client';
+"use client"
 
-import React, { useState } from 'react';
+// app/manage/page.tsx
+import BoardTypesManagement from "@/components/manage/board-types-management";
+import CoursesManagement from "@/components/manage/courses-management";
+import RidersManagement from "@/components/manage/riders-management";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import RidersManagement from '@/components/manage/riders-management';
-import BoardTypesManagement from '@/components/manage/board-types-management';
-import CoursesManagement from '@/components/manage/courses-management';
+
 
 export default function ManagePage() {
   return (
@@ -21,39 +20,15 @@ export default function ManagePage() {
         </TabsList>
         
         <TabsContent value="riders">
-          <Card>
-            <CardHeader>
-              <CardTitle>Manage Riders</CardTitle>
-              <CardDescription>Add, edit, or remove rider profiles.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RidersManagement />
-            </CardContent>
-          </Card>
+          <RidersManagement />
         </TabsContent>
 
         <TabsContent value="courses">
-          <Card>
-            <CardHeader>
-              <CardTitle>Manage Courses</CardTitle>
-              <CardDescription>Configure available time trial courses.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <CoursesManagement />
-            </CardContent>
-          </Card>
+          <CoursesManagement />
         </TabsContent>
 
         <TabsContent value="boards">
-          <Card>
-            <CardHeader>
-              <CardTitle>Manage Board Types</CardTitle>
-              <CardDescription>Set up different OneWheel board options.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <BoardTypesManagement />
-            </CardContent>
-          </Card>
+          <BoardTypesManagement />
         </TabsContent>
       </Tabs>
     </div>
